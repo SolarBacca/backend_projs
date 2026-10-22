@@ -1,0 +1,22 @@
+{
+  "base_url": "http://localhost:8000",
+  "resource": "events",
+  "id_field": "id",
+  "missing_id": "999999",
+  "list_key": null,
+  "create": {
+    "title": "Python Meetup",
+    "date": "2026-12-15T19:00:00",
+    "location": "Коворкинг Центр",
+    "capacity": 50
+  },
+  "update": {
+    "capacity": 100
+  },
+  "required_field": "title",
+  "errors": [
+    {"body": {"title": ""}, "field": "title"},
+    {"body": {"location": ""}, "field": "location"},
+    {"body": {"capacity": -1}, "field": "capacity"}
+  ]
+}
