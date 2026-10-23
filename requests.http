@@ -1,0 +1,140 @@
+### === HEALTH ===
+### Проверка здоровья -> 200 {"status": "ok"}
+GET http://localhost:8000/health
+
+
+### === СОЗДАНИЕ ===
+### Создать мероприятие -> 201
+POST http://localhost:8000/api/events
+Content-Type: application/json
+
+{
+  "title": "Python Meetup",
+  "date": "2025-12-15T19:00:00",
+  "location": "Коворкинг Центр",
+  "capacity": 50
+}
+
+### Создать второе -> 201
+POST http://localhost:8000/api/events
+Content-Type: application/json
+
+{
+  "title": "Хакатон",
+  "date": "2026-01-20T10:00:00",
+  "location": "Кампус",
+  "capacity": 100
+}
+
+
+### === ПОЛУЧЕНИЕ ===
+### Список всех -> 200
+GET http://localhost:8000/api/events
+
+### Получить по ID -> 200
+GET http://localhost:8000/api/events/1
+
+### Неизвестный ID -> 404
+GET http://localhost:8000/api/events/999
+
+
+### === ОБНОВЛЕНИЕ ===
+### Полная замена (PUT) -> 200
+PUT http://localhost:8000/api/events/1
+Content-Type: application/json
+
+{
+  "title": "Python Meetup Updated",
+  "date": "2025-12-15T19:00:00",
+  "location": "Новое место",
+  "capacity": 80
+}
+
+### Частичное обновление (PATCH) -> 200
+PATCH http://localhost:8000/api/events/1
+Content-Type: application/json
+
+{
+  "capacity": 120
+}
+
+### PUT несуществующего -> 404
+PUT http://localhost:8000/api/events/999
+Content-Type: application/json
+
+{
+  "title": "Нет такого",
+  "date": "2025-01-01",
+  "location": "Где-то",
+  "capacity": 10
+}
+
+### PATCH несуществующего -> 404
+PATCH http://localhost:8000/api/events/999
+Content-Type: application/json
+
+{
+  "capacity": 50
+}
+
+
+### === УДАЛЕНИЕ ===
+### Удалить -> 204 (пустой ответ)
+DELETE http://localhost:8000/api/events/2
+
+### После удаления -> 404
+GET http://localhost:8000/api/events/2
+
+### Повторное удаление -> 404
+DELETE http://localhost:8000/api/events/2
+
+
+### === ОШИБКИ ВАЛИДАЦИИ (должны давать 400) ===
+### Пустой title -> 400
+POST http://localhost:8000/api/events
+Content-Type: application/json
+
+{
+  "title": "",
+  "date": "2025-12-15T19:00:00",
+  "location": "Офис",
+  "capacity": 50
+}
+
+### Пустой location -> 400
+POST http://localhost:8000/api/events
+Content-Type: application/json
+
+{
+  "title": "Тест",
+  "date": "2025-12-15T19:00:00",
+  "location": "   ",
+  "capacity": 50
+}
+
+### Отрицательный capacity -> 400
+POST http://localhost:8000/api/events
+Content-Type: application/json
+
+{
+  "title": "Тест",
+  "date": "2025-12-15T19:00:00",
+  "location": "Офис",
+  "capacity": -1
+}
+
+### Отсутствует обязательное поле -> 400
+POST http://localhost:8000/api/events
+Content-Type: application/json
+
+{
+  "title": "Без capacity",
+  "date": "2025-12-15T19:00:00",
+  "location": "Офис"
+}
+
+### Битый JSON -> 400
+POST http://localhost:8000/api/events
+Content-Type: application/json
+
+{ "title": "Сломанный", "date":
