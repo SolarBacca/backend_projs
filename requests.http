@@ -138,3 +138,96 @@ POST http://localhost:8000/api/events
 Content-Type: application/json
 
 { "title": "Сломанный", "date":
+
+
+### === РЕГИСТРАЦИИ (вложенный ресурс) ===
+
+### Сначала создадим мероприятие для тестов -> 201
+POST http://localhost:8000/api/events
+Content-Type: application/json
+
+{
+  "title": "Python Meetup",
+  "date": "2025-12-15T19:00:00",
+  "location": "Коворкинг Центр",
+  "capacity": 2
+}
+
+
+### === СОЗДАНИЕ РЕГИСТРАЦИИ ===
+
+### Зарегистрировать первого участника -> 201
+POST http://localhost:8000/api/events/1/registrations
+Content-Type: application/json
+
+{
+  "name": "Иван Иванов",
+  "email": "ivan@example.com"
+}
+
+### Зарегистрировать второго участника -> 201
+POST http://localhost:8000/api/events/1/registrations
+Content-Type: application/json
+
+{
+  "name": "Пётр Петров",
+  "email": "petr@example.com"
+}
+
+
+### === ПОЛУЧЕНИЕ СПИСКА РЕГИСТРАЦИЙ ===
+
+### Список регистраций на мероприятие 1 -> 200
+GET http://localhost:8000/api/events/1/registrations
+
+### Список регистраций на несуществующее мероприятие -> 404
+GET http://localhost:8000/api/events/999/registrations
+
+
+### === ОШИБКИ ПРИ РЕГИСТРАЦИИ ===
+
+### Лимит участников исчерпан -> 409
+### (capacity = 2, уже зарегистрировано 2 человека)
+POST http://localhost:8000/api/events/1/registrations
+Content-Type: application/json
+
+{
+  "name": "Сергей Сергеев",
+  "email": "sergey@example.com"
+}
+
+### Дубликат email на то же мероприятие -> 409
+POST http://localhost:8000/api/events/1/registrations
+Content-Type: application/json
+
+{
+  "name": "Иван Иванов (дубль)",
+  "email": "ivan@example.com"
+}
+
+### Регистрация на несуществующее мероприятие -> 404
+POST http://localhost:8000/api/events/999/registrations
+Content-Type: application/json
+
+{
+  "name": "Тест Тестов",
+  "email": "test@example.com"
+}
+
+### Пустое имя -> 400
+POST http://localhost:8000/api/events/1/registrations
+Content-Type: application/json
+
+{
+  "name": "",
+  "email": "empty@example.com"
+}
+
+### Пустой email -> 400
+POST http://localhost:8000/api/events/1/registrations
+Content-Type: application/json
+
+{
+  "name": "Тест",
+  "email": ""
+}

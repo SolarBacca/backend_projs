@@ -4,11 +4,16 @@
   "id_field": "id",
   "missing_id": "999999",
   "list_key": null,
+  "text_field": "title",
+  "search": {
+    "param": "q",
+    "field": "title"
+  },
   "create": {
     "title": "Python Meetup",
     "date": "2026-12-15T19:00:00",
     "location": "Коворкинг Центр",
-    "capacity": 50
+    "capacity": 2
   },
   "update": {
     "capacity": 100
@@ -18,5 +23,30 @@
     {"body": {"title": ""}, "field": "title"},
     {"body": {"location": ""}, "field": "location"},
     {"body": {"capacity": -1}, "field": "capacity"}
-  ]
+  ],
+  "child": {
+    "resource": "registrations",
+    "create": {
+      "name": "Иван Иванов",
+      "email": "ivan@example.com"
+    },
+    "parent_field": "event_id"
+  },
+  "rule": {
+    "description": "Нельзя зарегистрироваться, если лимит исчерпан",
+    "parent": { "capacity": 1 },
+    "setup": [
+      {
+        "method": "POST",
+        "path": "/api/events/{id}/registrations",
+        "body": { "name": "Иван", "email": "ivan@test.com" }
+      }
+    ],
+    "violate": {
+      "method": "POST",
+      "path": "/api/events/{id}/registrations",
+      "body": { "name": "Пётр", "email": "petr@test.com" }
+    },
+    "expect_status": 409
+  }
 }

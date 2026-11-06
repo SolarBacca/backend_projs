@@ -31,3 +31,25 @@ uv run fastapi dev
 | PUT    | `/api/events/{id}`    | Полная замена        | 200, 400, 404 |
 | PATCH  | `/api/events/{id}`    | Частичное обновление | 200, 400, 404 |
 | DELETE | `/api/events/{id}`    | Удалить мероприятие  | 204, 404      |
+
+
+## ER-диаграмма
+
+Связь между таблицами **1:N** (одно мероприятие может иметь много регистраций).
+
+```mermaid
+erDiagram
+    EVENT ||--o{ REGISTRATION : "has registrations"
+    EVENT {
+        int id PK
+        string title
+        string date
+        string location
+        int capacity
+    }
+    REGISTRATION {
+        int id PK
+        string name
+        string email
+        int event_id FK
+    }
