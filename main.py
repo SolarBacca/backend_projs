@@ -2,14 +2,16 @@ from typing import Annotated
 from fastapi import FastAPI, Depends, HTTPException, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from sqlmodel import Session, select
+from sqlmodel import Session, select, col 
 
 from database import engine, create_db_and_tables, get_session
+
 from models import (
     Event, EventCreate, EventUpdate, EventPublic,
-    Registration, RegistrationCreate, RegistrationPublic
+    Registration, RegistrationCreate, RegistrationPublic,
+    User, UserCreate, UserPublic,          
 )
-
+from security import hash_password          
 create_db_and_tables()
 
 app = FastAPI(title="Events DB", version="2.0")
@@ -28,6 +30,20 @@ async def validation_exception_handler(request, exc):
 def health():
     return {"status": "ok"}
 
+# Auth (public endpoint)
+@app.post("/auth/register", response_model=UserPublic, status_code=201)
+def register(user_in: UserCreate, session: SessionDep):
+    existing = session.exec(
+        select(User).where(User.username == user_in.username)
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Пользователь с таким логином уже существует")
+    user = User(username=user_in.username, password_hash=hash_password(user_in.password))
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
 # --- CRUD для Event ---
 
 @app.post("/api/events", response_model=EventPublic, status_code=201)
@@ -38,9 +54,14 @@ def create_event(event: EventCreate, session: SessionDep):
     session.refresh(db_event)
     return db_event
 
+
 @app.get("/api/events", response_model=list[EventPublic])
-def list_events(session: SessionDep, skip: int = 0, limit: int = 100):
-    return session.exec(select(Event).offset(skip).limit(limit)).all()
+def list_events(session: SessionDep, q: str | None = None, skip: int = 0, limit: int = 100):
+    stmt = select(Event)
+    if q: 
+        stmt = stmt.where(col(Event.title).ilike(f"%{q}%"))
+    return session.exec(stmt.offset(skip).limit(limit)).all()
+
 
 @app.get("/api/events/{event_id}", response_model=EventPublic)
 def get_event(event_id: int, session: SessionDep):

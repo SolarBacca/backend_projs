@@ -1,10 +1,11 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
+from datetime import datetime 
 
 # --- Event модели ---
 class EventBase(SQLModel):
     title: str = Field(min_length=1)
-    date: str
+    date: datetime  
     location: str = Field(min_length=1)
     capacity: int = Field(ge=1)
 
@@ -21,7 +22,7 @@ class EventCreate(EventBase):
 
 class EventUpdate(SQLModel):
     title: Optional[str] = None
-    date: Optional[str] = None
+    date: Optional[datetime] = None
     location: Optional[str] = None
     capacity: Optional[int] = None
 
@@ -45,3 +46,24 @@ class RegistrationCreate(RegistrationBase):
 class RegistrationPublic(RegistrationBase):
     id: int
     event_id: int
+
+
+# User models
+class UserBase(SQLModel):
+    username: str = Field(min_length=1, max_length=50, index=True, unique=True)
+
+
+class User(UserBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    password_hash: str                     
+    role: str = Field(default="user")       
+
+class UserCreate(SQLModel):
+    """То, что присылает клиент. Поля role нет намерено."""
+    username: str = Field(min_length=1, max_length=50)
+    password: str = Field(min_length=1)     
+
+
+class UserPublic(UserBase):
+    """То, что возвращаем. Ни password, ни password_hash."""
+    id: int

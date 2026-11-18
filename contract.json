@@ -48,5 +48,80 @@
       "body": { "name": "Пётр", "email": "petr@test.com" }
     },
     "expect_status": 409
+  },
+
+  "auth": {
+    "scheme": "basic",
+    "schemes": ["basic", "bearer"],
+    "register_path": "/auth/register",
+    "login_path": "/auth/login",
+    "me_path": "/auth/me",
+    "login_field": "username",
+    "password_field": "password",
+    "token_field": "access_token",
+    "owner_field": "owner_id",
+
+    "admin": {
+      "username": "admin",
+      "password": "admin-test-pass"
+    },
+    "test_user": {
+      "username": "testuser",
+      "password": "testpass123"
+    },
+    "other_user": {
+      "username": "otheruser",
+      "password": "otherpass123"
+    },
+    "invalid_password": "wrong-password",
+
+    "tests": {
+      "register_duplicate": {
+        "description": "Повтор логина → 409 (пункт 1)",
+        "expect_status": 409
+      },
+      "unauthorized": {
+        "description": "Изменение без авторизации → 401 (пункт 3)",
+        "method": "PUT",
+        "path": "/api/events/{id}",
+        "expect_status": 401,
+        "detail_is_generic": true
+      },
+      "invalid_credentials": {
+        "description": "Неверный пароль → 401 без подсказки, неверный логин → 401 без подсказки (пункт 3)",
+        "expect_status": 401,
+        "detail_is_generic": true
+      },
+      "forbidden": {
+        "description": "Чужая запись → 403 (пункт 6)",
+        "expect_status": 403
+      },
+      "me_response": {
+        "description": "GET /auth/me не содержит пароля и хэша (пункт 4)",
+        "forbidden_fields": ["password", "password_hash", "passwordHash"],
+        "required_fields": ["id", "username"]
+      },
+      "owner_server_set": {
+        "description": "owner_id проставляет сервер, клиент не может его задать (пункт 5)",
+        "client_must_not_send_field": true
+      },
+      "rate_limit": {
+        "description": "5 неверных попыток входа подряд → 429 (★★)",
+        "attempts": 5,
+        "expect_status": 429
+      },
+      "jwt_expired": {
+        "description": "Истёкший токен → 401 (★)",
+        "expect_status": 401
+      },
+      "jwt_tampered": {
+        "description": "Подделанный токен → 401 (★)",
+        "expect_status": 401
+      },
+      "admin_can_edit_any": {
+        "description": "Админ может изменять любое событие (★★)",
+        "expect_status": 200
+      }
+    }
   }
 }
