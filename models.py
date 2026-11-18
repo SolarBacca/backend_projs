@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
-from datetime import datetime 
+from datetime import datetime, timezone
+from pydantic import field_validator
 
 # --- Event модели ---
 class EventBase(SQLModel):
@@ -8,6 +9,14 @@ class EventBase(SQLModel):
     date: datetime  
     location: str = Field(min_length=1)
     capacity: int = Field(ge=1)
+
+    @field_validator("date")
+    @classmethod
+    def ensure_tz(cls, v: datetime) -> datetime:
+        if v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v
+
 
 class Event(EventBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
