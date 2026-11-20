@@ -25,6 +25,8 @@ class Event(EventBase, table=True):
         back_populates="event", 
         cascade_delete=True
     )
+    owner_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    owner: Optional[User] = Relationship(back_populates="events")
 
 class EventCreate(EventBase):
     pass
@@ -37,6 +39,7 @@ class EventUpdate(SQLModel):
 
 class EventPublic(EventBase):
     id: int
+    owner_id: Optional[int] = None 
 
 # --- Registration модели ---
 class RegistrationBase(SQLModel):
@@ -66,6 +69,8 @@ class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     password_hash: str                     
     role: str = Field(default="user")       
+    events: list[Event] = Relationship(back_populates="owner")
+
 
 class UserCreate(SQLModel):
     """То, что присылает клиент. Поля role нет намерено."""

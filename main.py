@@ -12,7 +12,7 @@ from models import (
     User, UserCreate, UserPublic,          
 )
 from security import hash_password         
-from dependencies import CurrentUser 
+from dependencies import CurrentUser, OwnedEvent
  
 create_db_and_tables()
 
@@ -52,6 +52,7 @@ def register(user_in: UserCreate, session: SessionDep):
 def create_event(event: EventCreate, session: SessionDep, user: CurrentUser):
     
     db_event = Event.model_validate(event)
+    db_event.owner_id = user.id  
     session.add(db_event)
     session.commit()
     session.refresh(db_event)
@@ -74,10 +75,7 @@ def get_event(event_id: int, session: SessionDep):
     return event
 
 @app.put("/api/events/{event_id}", response_model=EventPublic)
-def update_event(event_id: int, event_update: EventCreate, session: SessionDep, user: CurrentUser):
-    event = session.get(Event, event_id)
-    if not event:
-        raise HTTPException(status_code=404, detail="Мероприятие не найдено")
+def update_event(event: OwnedEvent, event_update: EventCreate, session: SessionDep):
     for key, value in event_update.model_dump().items():
         setattr(event, key, value)
     session.add(event)
@@ -86,10 +84,7 @@ def update_event(event_id: int, event_update: EventCreate, session: SessionDep, 
     return event
 
 @app.patch("/api/events/{event_id}", response_model=EventPublic)
-def patch_event(event_id: int, event_update: EventUpdate, session: SessionDep, user: CurrentUser):
-    event = session.get(Event, event_id)
-    if not event:
-        raise HTTPException(status_code=404, detail="Мероприятие не найдено")
+def patch_event(event: OwnedEvent, event_update: EventUpdate, session: SessionDep):
     update_data = event_update.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="Нужно хотя бы одно поле")
@@ -101,10 +96,7 @@ def patch_event(event_id: int, event_update: EventUpdate, session: SessionDep, u
     return event
 
 @app.delete("/api/events/{event_id}", status_code=204)
-def delete_event(event_id: int, session: SessionDep, user: CurrentUser):
-    event = session.get(Event, event_id)
-    if not event:
-        raise HTTPException(status_code=404, detail="Мероприятие не найдено")
+def delete_event(event: OwnedEvent, session: SessionDep) -> Response:
     session.delete(event)
     session.commit()
     return Response(status_code=204)

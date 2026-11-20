@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException, Request, status
 from sqlmodel import Session, select
 
 from database import get_session
-from models import User
+from models import User, Event
 from security import verify_password
 
 
@@ -25,11 +25,11 @@ def get_current_user(
     header = request.headers.get("Authorization", "")
     scheme, _, credentials = header.partition(" ")
 
-    # Заголовка нет или схема не Basic
+  
     if scheme.lower() != "basic" or not credentials:
         raise _unauthorized()
 
-    # Basic <base64(login:password)>
+   
     try:
         decoded = base64.b64decode(credentials, validate=True).decode("utf-8")
     except (ValueError, UnicodeDecodeError):
@@ -47,3 +47,20 @@ def get_current_user(
   
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+def get_owned_event(
+    event_id: int,
+    session: Session = Depends(get_session),
+    user: CurrentUser = None,        
+) -> Event:
+ 
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Мероприятие не найдено")
+    
+    if user.role != "admin" and event.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Это не ваше событие")
+    return event
+
+
+OwnedEvent = Annotated[Event, Depends(get_owned_event)]
