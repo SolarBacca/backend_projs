@@ -7,7 +7,15 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import User, Event
-from security import verify_password
+from security import verify_password, decode_access_token, note_login_failure, clear_login_failures
+
+
+def rate_limited() -> HTTPException:
+    return HTTPException(
+        status_code=429,
+        detail="Слишком много неудачных попыток входа",
+        headers={"Retry-After": "60"},
+    )
 
 
 def _unauthorized() -> HTTPException:
@@ -25,6 +33,18 @@ def get_current_user(
     header = request.headers.get("Authorization", "")
     scheme, _, credentials = header.partition(" ")
 
+    if scheme.lower() == "bearer":
+        payload = decode_access_token(credentials)
+        if payload is None:
+            raise _unauthorized()          # подделка / просрочка → 401 без подсказок
+        try:
+            user = session.get(User, int(payload["sub"]))
+        except (KeyError, ValueError, TypeError):
+            raise _unauthorized()
+        if user is None:
+            raise _unauthorized()
+        return user
+
   
     if scheme.lower() != "basic" or not credentials:
         raise _unauthorized()
@@ -40,9 +60,13 @@ def get_current_user(
         raise _unauthorized()
 
     user = session.exec(select(User).where(User.username == username)).first()
-    if user is None or not verify_password(password, user.password_hash):
-        raise _unauthorized()
-
+    ok = user is not None and verify_password(password, user.password_hash)
+    if not ok:
+        if note_login_failure(username):   
+            raise rate_limited()           
+        raise _unauthorized()           
+    clear_login_failures(username)         
+    
     return user
   
 

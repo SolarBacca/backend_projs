@@ -79,5 +79,8 @@ class UserCreate(SQLModel):
 
 
 class UserPublic(UserBase):
-    """То, что возвращаем. Ни password, ни password_hash."""
     id: int
+
+class Token(SQLModel):
+    access_token: str
+    token_type: str = "bearer"

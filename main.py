@@ -11,12 +11,35 @@ from models import (
     Registration, RegistrationCreate, RegistrationPublic,
     User, UserCreate, UserPublic,          
 )
-from security import hash_password         
-from dependencies import CurrentUser, OwnedEvent
- 
-create_db_and_tables()
+from security import (
+    hash_password, verify_password, create_access_token,
+    note_login_failure, clear_login_failures,      # ← этого не хватало
+)
+from models import Token 
 
-app = FastAPI(title="Events DB", version="2.0")
+from dependencies import CurrentUser, OwnedEvent
+import os
+from contextlib import asynccontextmanager 
+
+asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_and_tables()
+    with Session(engine) as session:
+        login = os.getenv("ADMIN_USERNAME", "admin")
+        admin = session.exec(select(User).where(User.username == login)).first()
+        if admin is None:
+            session.add(User(
+                username=login,
+                password_hash=hash_password(os.getenv("ADMIN_PASSWORD", "admin-test-pass")),  # ← исправлен дефолт
+                role="admin",
+            ))
+            session.commit()
+        elif admin.role != "admin":
+            admin.role = "admin"
+            session.commit()
+    yield       
+
+app = FastAPI(title="Events DB", version="2.0", lifespan=lifespan) 
 SessionDep = Annotated[Session, Depends(get_session)]
 
 # --- Обработчик ошибок ---
@@ -31,20 +54,6 @@ async def validation_exception_handler(request, exc):
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-# Auth (public endpoint)
-@app.post("/auth/register", response_model=UserPublic, status_code=201)
-def register(user_in: UserCreate, session: SessionDep):
-    existing = session.exec(
-        select(User).where(User.username == user_in.username)
-    ).first()
-    if existing:
-        raise HTTPException(status_code=409, detail="Пользователь с таким логином уже существует")
-    user = User(username=user_in.username, password_hash=hash_password(user_in.password))
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    return user
 
 # --- CRUD для Event ---
 
@@ -170,8 +179,19 @@ def register(user_in: UserCreate, session: SessionDep):
 
 
 @app.get("/auth/login", response_model=UserPublic)
-def login(user: CurrentUser):
+def login_basic(user: CurrentUser):
     return user
+
+@app.post("/auth/login", response_model=Token)
+def login_token(user_in: UserCreate, session: SessionDep):
+    user = session.exec(select(User).where(User.username == user_in.username)).first()
+    ok = user is not None and verify_password(user_in.password, user.password_hash)
+    if not ok:
+        if note_login_failure(user_in.username):
+            raise rate_limited()
+        raise HTTPException(status_code=401, detail="Не авторизован")
+    clear_login_failures(user_in.username)
+    return Token(access_token=create_access_token(user))
 
 
 @app.get("/auth/me", response_model=UserPublic)
